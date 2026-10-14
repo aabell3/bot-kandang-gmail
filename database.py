@@ -1,56 +1,58 @@
 import sqlite3
 
+DB_NAME = "bot_gmail.db"
+
+def get_connection():
+    return sqlite3.connect(DB_NAME)
+
 def init_db():
-    conn = sqlite3.connect('bot_gmail.db', check_same_thread=False)
+    conn = get_connection()
     cursor = conn.cursor()
-    
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS users (
-            user_id INTEGER PRIMARY KEY,
-            username TEXT,
-            balance INTEGER DEFAULT 0
-        )
-    ''')
-    
+    # Tabel tugas dengan status: 'active', 'completed', 'cancelled'
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS tasks (
             task_id TEXT PRIMARY KEY,
             user_id INTEGER,
+            first_name TEXT,
+            last_name TEXT,
             email TEXT,
             password TEXT,
-            first_name TEXT,
             birth_date TEXT,
-            status TEXT,
-            created_at TEXT
+            status TEXT DEFAULT 'active'
         )
     ''')
-    
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS settings (
-            key TEXT PRIMARY KEY,
-            value TEXT
-        )
-    ''')
-    
-    cursor.execute("INSERT OR IGNORE INTO settings VALUES ('birth_year', '1998')")
-    cursor.execute("INSERT OR IGNORE INTO settings VALUES ('password_pattern', 'fineirga')")
     conn.commit()
     conn.close()
 
-def get_db_connection():
-    return sqlite3.connect('bot_gmail.db', check_same_thread=False)
-
-def get_setting(key):
-    conn = get_db_connection()
+def get_active_task(user_id):
+    """Mengecek apakah user memiliki task yang masih aktif (belum submit/cancel)"""
+    conn = get_connection()
     cursor = conn.cursor()
-    cursor.execute("SELECT value FROM settings WHERE key = ?", (key,))
-    res = cursor.fetchone()
+    cursor.execute(
+        "SELECT * FROM tasks WHERE user_id = ? AND status = 'active'",
+        (user_id,)
+    )
+    task = cursor.fetchone()
     conn.close()
-    return res[0] if res else ""
+    return task
 
-def set_setting(key, value):
-    conn = get_db_connection()
+def save_task(task_id, user_id, first_name, last_name, email, password, birth_date):
+    conn = get_connection()
     cursor = conn.cursor()
-    cursor.execute("REPLACE INTO settings (key, value) VALUES (?, ?)", (key, value))
+    cursor.execute('''
+        INSERT INTO tasks (task_id, user_id, first_name, last_name, email, password, birth_date, status)
+        VALUES (?, ?, ?, ?, ?, ?, ?, 'active')
+    ''', (task_id, user_id, first_name, last_name, email, password, birth_date))
+    conn.commit()
+    conn.close()
+
+def update_task_status(task_id, status):
+    """Mengubah status task menjadi 'completed' atau 'cancelled'"""
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute(
+        "UPDATE tasks SET status = ? WHERE task_id = ?",
+        (status, task_id)
+    )
     conn.commit()
     conn.close()
