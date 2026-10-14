@@ -1,1 +1,12 @@
+# Abaikan file konfigurasi yang berisi token rahasia
+config.py
 
+# Abaikan file database lokal agar tidak ikut ter-upload
+*.db
+
+# Abaikan cache Python
+__pycache__/
+*.pyc
+
+# Abaikan log file
+bot.log
